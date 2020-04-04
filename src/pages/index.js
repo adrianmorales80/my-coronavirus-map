@@ -1,6 +1,6 @@
 import React from 'react';
 import Helmet from 'react-helmet';
-import L from 'leaflet';
+import L, { geoJson, map } from 'leaflet';
 
 import Layout from 'components/Layout';
 import Container from 'components/Container';
@@ -9,8 +9,8 @@ import Map from 'components/Map';
 import axios from 'axios';
 
 const LOCATION = {
-  lat: 38.9072,
-  lng: -77.0369
+  lat: 0,
+  lng: 0
 };
 const CENTER = [LOCATION.lat, LOCATION.lng];
 const DEFAULT_ZOOM = 2;
@@ -57,8 +57,68 @@ const IndexPage = () => {
         }
       })
     }
-    console.log('API response: ',data);
-    console.log('geoJson object',geoJson);
+
+    console.log('API response: ',data); // Print API response
+    console.log('geoJson object', geoJson); // Print geojson object; https://geojson.org/
+
+    // Create new instance of L.GeoJSON to transform GeoJSON doc into something Leaflet understands
+    const geoJsonLayers = new L.GeoJSON(geoJson, {
+      // Custom pointToLayer method to customize map layer Leaflet creates
+      pointToLayer: (feature  = {}, latlng) => {
+        const { properties = {}} = feature;
+        let updatedFormatted;
+        let casesString;
+        
+        // Datapoints we are interested in
+        const {
+          country,
+          updated,
+          cases,
+          deaths,
+          recovered
+        } = properties
+
+        casesString = `${cases}`;
+
+        // Show 1K+ instead of 1000
+        if (cases > 1000) {
+          casesString = `${casesString.slice(0,-3)}k+`
+        }
+
+        if (updated) {
+          updatedFormatted = new Date(updated).toLocaleDateString();
+        }
+
+        // Define map marker added to map and HTML for tooltip on hover
+        const html = `
+        <span class="icon-marker">
+          <span class="icon-marker-tooltip">
+            <h2>${country}</h2>
+            <ul>
+              <li><strong>Confirmed:</strong> ${cases}</li>
+              <li><strong>Deaths:</strong> ${deaths}</li>
+              <li><strong>Recovered</strong> ${recovered}</li>
+              <li><strong>Last Update:</strong> ${updatedFormatted}</li>
+            </ul>
+          </span>
+          ${casesString}
+        </span>
+        `;
+
+        // Return L.marker custom config, including .icon for container and custom HTML
+        return L.marker(latlng, {
+          icon: L.divIcon({
+            className: 'icon',
+            html
+          }),
+          riseOnHover: true // Hover over the markers on the map
+        });
+      }
+    });
+
+    // Add geoJsonLayers to the map
+    geoJsonLayers.addTo(map);
+
   }
 
   const mapSettings = {
