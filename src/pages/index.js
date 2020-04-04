@@ -24,6 +24,7 @@ const IndexPage = () => {
    */
 
   async function mapEffect({ leafletElement: map } = {}) {
+    // Get data from API
     let response;
 
     try {
@@ -33,8 +34,31 @@ const IndexPage = () => {
       return e;
     }
 
+    // If data is available create geoJson object
     const {data = []} = response;
-    console.log(data);
+    const hasData = Array.isArray(data) && data.length > 0;
+
+    if (!hasData) return;
+
+    const geoJson = {
+      type: 'FeatureCollection',
+      features: data.map((country = {}) => {
+        const { countryInfo = {} } = country;
+        const { lat, long: lng } = countryInfo;
+        return {
+          type: 'Feature',
+          properties: {
+            ...country,
+          },
+          geometry: {
+            type: 'Point',
+            coordinates: [ lng, lat ]
+          }
+        }
+      })
+    }
+    console.log('API response: ',data);
+    console.log('geoJson object',geoJson);
   }
 
   const mapSettings = {
